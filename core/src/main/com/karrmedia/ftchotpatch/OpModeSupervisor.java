@@ -1,40 +1,22 @@
-package org.firstinspires.ftc.robotcontroller.internal;
+package com.karrmedia.ftchotpatch;
 
 import android.annotation.SuppressLint;
-import android.os.Environment;
-import android.os.FileObserver;
-
-import androidx.annotation.Nullable;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.RobotLog;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
-
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.WatchService;
-
-import dalvik.system.DexFile;
-import dalvik.system.InMemoryDexClassLoader;
-import dalvik.system.PathClassLoader;
 
 // Keeps track of the code for an opmode and runs it
 public class OpModeSupervisor extends LinearOpMode {
     long id;
 
+    // Class and instance of the child OpMode
     Class<SupervisedOpMode> clazz;
     SupervisedOpMode opmode;
 
-    FileObserver watcher;
-    //boolean reloadRequired = false;
     int opmodeVersion = 1;
     DexFileClassLoader loader;
 
@@ -80,7 +62,7 @@ public class OpModeSupervisor extends LinearOpMode {
 
             while (opModeIsActive()) {
                 try {
-                    if (UpdateCache.inst.ver > opmodeVersion) {
+                    if (SupervisedClassManager.currentVersion > opmodeVersion) {
                         RobotLog.e("Reloading class %s", clazz.getCanonicalName());
                         telemetry.addData("Reloading class %s", clazz.getCanonicalName());
                         telemetry.update();
@@ -89,7 +71,7 @@ public class OpModeSupervisor extends LinearOpMode {
 
                         //Class newClazz = loader.findClass(clazz.getCanonicalName());
                         //Class newClazz = dexFile.loadClass(clazz.getCanonicalName(), this.getClass().getClassLoader());
-                        Class<SupervisedOpMode> newClazz = (Class<SupervisedOpMode>)UpdateCache.inst.loader.findClass(clazz.getCanonicalName());
+                        Class<SupervisedOpMode> newClazz = (Class<SupervisedOpMode>)SupervisedClassManager.get().findOpMode(clazz.getCanonicalName());
 
                         SupervisedOpMode oldOpmode = opmode;
 
@@ -97,7 +79,7 @@ public class OpModeSupervisor extends LinearOpMode {
                         clazz = newClazz;
                         opmode.init(this);
 
-                        opmodeVersion = UpdateCache.inst.ver;
+                        opmodeVersion = SupervisedClassManager.get().currentVersion;
                     }
 
                     opmode.loop();

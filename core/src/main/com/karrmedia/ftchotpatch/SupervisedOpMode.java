@@ -1,10 +1,6 @@
-package org.firstinspires.ftc.robotcontroller.internal;
+package com.karrmedia.ftchotpatch;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-
-import org.firstinspires.ftc.robotcore.external.Telemetry;
-
-import java.io.ByteArrayOutputStream;
 
 public interface SupervisedOpMode {
     // Runs the first time an opmode is created
