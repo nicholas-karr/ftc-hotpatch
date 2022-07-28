@@ -1,0 +1,3 @@
+rootProject.name = 'ftc-hotpatch'
+
+include ':core'
