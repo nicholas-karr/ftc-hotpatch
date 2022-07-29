@@ -1,140 +1,100 @@
 package com.karrmedia.ftchotpatch;
 
-import android.annotation.SuppressLint;
-
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.RobotLog;
 
-import java.io.File;
-import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
-import dalvik.system.PathClassLoader;
-
-// Keeps track of the code for an opmode and runs it
+// Keeps track of the code for an OpMode and runs it
 public class OpModeSupervisor extends LinearOpMode {
-    long id;
 
     // Class and instance of the child OpMode
-    Class<SupervisedOpMode> clazz;
+    Class<? extends SupervisedOpMode> clazz;
     SupervisedOpMode opmode;
 
-    int opmodeVersion = 1;
-    DexFileClassLoader loader;
+    // Version that is incremented every time the OpMode is replaced
+    int opModeVersion = 1;
 
-    ElapsedTime runtime;
-
-    public OpModeSupervisor(long id, Class<SupervisedOpMode> clazz) throws IllegalAccessException, InstantiationException {
-        this.id = id;
+    public OpModeSupervisor(Class<? extends SupervisedOpMode> clazz) throws IllegalAccessException, InstantiationException {
         this.clazz = clazz;
 
         opmode = clazz.newInstance();
     }
 
-    public long getId() {
-        return id;
-    }
-
-    @SuppressLint("SdCardPath")
     @Override
     public void runOpMode() {
         try {
-            /*File dexFolder = new File("/sdcard/FIRST/hotpatch/");
+            opmode.gamepad1 = this.gamepad1;
+            opmode.gamepad2 = this.gamepad2;
+            opmode.telemetry = this.telemetry;
+            opmode.hardwareMap = this.hardwareMap;
 
-            //watcher = new FileObserver(new File("/sdcard/FIRST/hotpatch/" + clazz.getPackage().getName().replaceAll("\\.", "/"))) {
-            watcher = new FileObserver(dexFolder) {
-                @Override
-                public void onEvent(int event, @Nullable String path) {
-                    RobotLog.e("Hotpatch file update detected, initiating update of all supervised classes");
+            opmode.currentState = SupervisedOpMode.State.INIT;
+            opmode.init();
 
-                    //if (path == null || !path.contains(clazz.getSimpleName())) { return; }
-                    if (path == null) { return; }
-                    if (event != FileObserver.CLOSE_WRITE && event != FileObserver.MODIFY) { return; }
-                }
-            };
-            watcher.startWatching();
+            while (!isStarted()) {
+                opmode.currentState = SupervisedOpMode.State.INIT_LOOP;
+                opmode.init_loop();
+            }
 
-            //loader = new URLClassLoader(new URL[]{new File("/sdcard/FIRST/hotpatch").toURI().toURL()});
-            loader = new DexFileClassLoader(getLoadableDexes(dexFolder), null); //this.getClass().getClassLoader());*/
+            opmode.currentState = SupervisedOpMode.State.START;
+            opmode.start();
 
-            opmode.firstInit(this);
-            opmode.init(this);
-
-            waitForStart();
-
+            opmode.currentState = SupervisedOpMode.State.LOOP;
             while (opModeIsActive()) {
                 try {
-                    if (SupervisedClassManager.get().currentVersion > opmodeVersion) {
+                    if (SupervisedClassManager.get().currentVersion > opModeVersion) {
                         RobotLog.e("Reloading class %s", clazz.getCanonicalName());
                         telemetry.addData("Reloading class %s", clazz.getCanonicalName());
                         telemetry.update();
 
-                        //DexFile dexFile = new DexFile("/sdcard/FIRST/hotpatch/RedTeleOp.dex");
-
-                        //Class newClazz = loader.findClass(clazz.getCanonicalName());
-                        //Class newClazz = dexFile.loadClass(clazz.getCanonicalName(), this.getClass().getClassLoader());
                         Class<SupervisedOpMode> newClazz = (Class<SupervisedOpMode>)SupervisedClassManager.get().findOpMode(clazz.getCanonicalName());
 
                         SupervisedOpMode oldOpmode = opmode;
 
                         opmode = newClazz.newInstance();
-                        clazz = newClazz;
-                        opmode.init(this);
 
-                        opmodeVersion = SupervisedClassManager.get().currentVersion;
+                        // Copy all non-transient variables over
+                        Field[] newFields = opmode.getClass().getDeclaredFields();
+                        for (Field field : oldOpmode.getClass().getDeclaredFields()) {
+                            if (Modifier.isTransient(field.getModifiers())) {
+                                continue;
+                            }
+
+                            // Find the matching field in the new object and copy it over
+                            for (Field newField : newFields) {
+                                if (newField.getName() == field.getName() && newField.getType() == field.getType()) {
+                                    field.setAccessible(true);
+                                    newField.setAccessible(true);
+
+                                    newField.set(opmode, field.get(oldOpmode));
+                                }
+                            }
+                        }
+
+                        clazz = newClazz;
+                        opmode.hotpatch();
+
+                        opModeVersion = SupervisedClassManager.get().currentVersion;
                     }
 
                     opmode.loop();
                 } catch (Exception e) {
-                    RobotLog.e("Exception during opmode loop: %s", e.getMessage());
-                    telemetry.addData("Exception during opmode loop: %s", e.getMessage());
+                    RobotLog.e("Exception during opMode loop: %s", e.getMessage());
+                    telemetry.addData("Exception during opMode loop: %s", e.getMessage());
                     telemetry.update();
                 }
             }
+
+            opmode.currentState = SupervisedOpMode.State.STOP;
+            opmode.stop();
         }
         catch (Exception e) {
-            RobotLog.e("Top-level opmode exception: %s", e.getMessage());
-            telemetry.addData("Top-level opmode exception: %s", e.getMessage());
+            RobotLog.e("Top-level opMode exception: %s", e.getMessage());
+            telemetry.addData("Top-level opMode exception: %s", e.getMessage());
             telemetry.update();
         }
 
-    }
-
-
-
-    void reloadClass() {
-
-    }
-
-    // Returns a colon-separated list of dex files that can be hotpatched
-    String getLoadableDexes(File folder) throws IOException {
-        StringBuilder ret = new StringBuilder();
-
-        for (final File file : folder.listFiles()) {
-            if (file.isFile()) {
-                ret.append(file.getCanonicalPath());
-                ret.append(File.pathSeparatorChar);
-            }
-        }
-
-        if (ret.length() != 0) {
-            // Remove trailing colon
-            ret.deleteCharAt(ret.length() - 1);
-        }
-        else {
-            RobotLog.e("No files found to hotpatch?");
-        }
-
-        return ret.toString();
-    }
-
-    class DexFileClassLoader extends PathClassLoader {
-        public DexFileClassLoader(String dexPath, ClassLoader parent) {
-            super(dexPath, parent);
-        }
-
-        public Class<?> findClass(String name) throws ClassNotFoundException {
-            return super.findClass(name);
-        }
     }
 }

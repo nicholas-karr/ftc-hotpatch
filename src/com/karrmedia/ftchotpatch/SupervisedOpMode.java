@@ -1,18 +1,52 @@
 package com.karrmedia.ftchotpatch;
 
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.HardwareMap;
 
-public interface SupervisedOpMode {
-    // Runs the first time an opmode is created
-    public void firstInit(LinearOpMode opmode);
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 
-    // Runs after each patch to allow transient variables since as motors to be obtained
-    public void init(LinearOpMode opmode);
+public abstract class SupervisedOpMode {
+    // Code that runs when the INIT button is pressed (mandatory)
+    public abstract void init();
 
-    // Runs repeatedly while the current opmode is active
-    public void loop();
+    // Code that runs repeatedly during the init stage (optional)
+    public void init_loop() {}
 
-    // Runs when this opmode's code is being replaces by anothers
-    // Serializes non-transient fields for use in the new object
-    //public ByteArrayOutputStream serialize();
+    // Code that runs when the PLAY button is pressed (optional)
+    public void start() {}
+
+    // Code that runs repeatedly after the PLAY button is pressed (optional)
+    public void loop() {}
+
+    // Code that runs when the OpMode is stopped (optional)
+    public void stop() {}
+
+    // Code that runs after this OpMode is dynamically updated
+    public void hotpatch() {}
+
+
+    // Compatibility with LinearOpMode
+    enum State {
+        DEFAULT,
+        STOP,
+        INIT,
+        INIT_LOOP,
+        START,
+        LOOP,
+    }
+
+    public State currentState = State.STOP;
+
+    public boolean opModeIsActive() {
+        return currentState.compareTo(State.START) >= 0;
+    }
+
+    public Gamepad gamepad1 = null;
+    public Gamepad gamepad2 = null;
+    public Telemetry telemetry = null;
+    public HardwareMap hardwareMap = null;
+
+    public void updateTelemetry(Telemetry telemetry) {
+        telemetry.update();
+    }
 }

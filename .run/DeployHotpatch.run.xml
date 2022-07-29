@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="DeployHotpatch" type="Java Scratch">
+    <option name="MAIN_CLASS_NAME" value="com.karrmedia.ftchotpatch.DeployHotpatch" />
+    <module name="Sargon-FTC-Energize.FtcRobotController" />
+    <option name="PROGRAM_PARAMETERS" value="$ProjectFileDir$" />
+    <option name="SCRATCH_FILE_URL" value="file://$PROJECT_DIR$/../ftc-hotpatch/src/com/karrmedia/ftchotpatch/DeployHotpatch.java" />
+    <shortenClasspath name="NONE" />
+    <method v="2">
+      <option name="Gradle.BeforeRunTask" enabled="true" tasks="assemble" externalProjectPath="$PROJECT_DIR$/TeamCode" vmOptions="" scriptParameters="" />
+    </method>
+  </configuration>
+</component>

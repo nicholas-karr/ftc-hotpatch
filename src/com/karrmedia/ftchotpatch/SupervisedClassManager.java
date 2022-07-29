@@ -105,9 +105,9 @@ public class SupervisedClassManager {
                 builder.autoTransition = annotation.next();
                 builder.source = OpModeMeta.Source.ANDROID_STUDIO;
 
-                OpModeSupervisor supervisor = new OpModeSupervisor(annotation.hashCode(), clazz);
+                OpModeSupervisor supervisor = new OpModeSupervisor(clazz);
 
-                // Build the new opmode consisting of the information from the annotation, and the supervisor
+                // Build the new OpMode consisting of the information from the annotation, and the supervisor
                 opmodes.add(new OpModeMetaAndInstance(builder.build(), supervisor, null));
             }
             catch (InstantiationException | IllegalAccessException e) { }
@@ -171,12 +171,10 @@ public class SupervisedClassManager {
 
     @SuppressLint("SdCardPath")
     public void loadNewDex() {
-        List<File> dexPaths = new ArrayList<>();
         StringBuilder paths = new StringBuilder();
 
         for (final File file : Objects.requireNonNull(new File("/sdcard/FIRST/hotpatch").listFiles())) {
             if (file.isFile() && file.getPath().contains("classes")) {
-                dexPaths.add(file);
                 paths.append(file.getPath());
                 paths.append(':');
             }
