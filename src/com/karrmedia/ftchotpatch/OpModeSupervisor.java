@@ -9,6 +9,8 @@ import com.qualcomm.robotcore.util.RobotLog;
 import java.io.File;
 import java.io.IOException;
 
+import dalvik.system.PathClassLoader;
+
 // Keeps track of the code for an opmode and runs it
 public class OpModeSupervisor extends LinearOpMode {
     long id;
@@ -62,7 +64,7 @@ public class OpModeSupervisor extends LinearOpMode {
 
             while (opModeIsActive()) {
                 try {
-                    if (SupervisedClassManager.currentVersion > opmodeVersion) {
+                    if (SupervisedClassManager.get().currentVersion > opmodeVersion) {
                         RobotLog.e("Reloading class %s", clazz.getCanonicalName());
                         telemetry.addData("Reloading class %s", clazz.getCanonicalName());
                         telemetry.update();

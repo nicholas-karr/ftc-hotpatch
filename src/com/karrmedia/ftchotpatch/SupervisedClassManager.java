@@ -1,8 +1,14 @@
 package com.karrmedia.ftchotpatch;
 
+import android.annotation.SuppressLint;
+import android.os.FileObserver;
+
+import androidx.annotation.Nullable;
+
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-import com.sun.jdi.ClassNotPreparedException;
+import com.qualcomm.robotcore.eventloop.opmode.OpModeManager;
+import com.qualcomm.robotcore.util.RobotLog;
 
 import org.firstinspires.ftc.robotcore.internal.opmode.InstantRunHelper;
 import org.firstinspires.ftc.robotcore.internal.opmode.OpModeMeta;
@@ -18,23 +24,24 @@ import java.util.List;
 import java.util.Objects;
 
 import dalvik.system.DexFile;
+import dalvik.system.PathClassLoader;
 
 public class SupervisedClassManager {
     static SupervisedClassManager inst;
     public static SupervisedClassManager get() {
         if (inst == null) {
-            throw new ClassNotPreparedException();
+            throw new NullPointerException();
         }
         return inst;
     }
 
-    public static init(OpModeManager registry) {
+    public static void init(OpModeManager registry) {
         inst = new SupervisedClassManager();
 
-        List<OpModeMetaAndInstance> opmodes = loader.getSupervisedOpmodes();
+        List<OpModeMetaAndInstance> opmodes = get().getSupervisedOpmodes();
 
         for (OpModeMetaAndInstance opmode : opmodes) {
-            manager.register(opmode.meta, opmode.instance);
+            registry.register(opmode.meta, opmode.instance);
         }
     }
 
@@ -43,12 +50,38 @@ public class SupervisedClassManager {
 
     FileObserver watcher;
     public int currentVersion = 0;
-    public UpdateCache.FakeParentClassLoader loader;
+    public FakeParentClassLoader loader;
 
     public SupervisedClassManager()  {
         try {
             //todo: replace this with something that isn't deprecated (right now it is inspired by how FTC does it)
             this.dexFile = new DexFile(AppUtil.getInstance().getApplication().getPackageCodePath());
+
+            File classDirectory = new File("/sdcard/FIRST/hotpatch/");
+            if (!classDirectory.exists()){
+                classDirectory.mkdirs();
+            }
+
+            @SuppressLint("SdCardPath")
+            File updateLock = new File("/sdcard/FIRST/hotpatch/updateLock");
+            updateLock.createNewFile();
+
+            watcher = new FileObserver(updateLock) {
+                @Override
+                public void onEvent(int event, @Nullable String path) {
+                    RobotLog.d("Saw updateLock event of type " + event);
+
+                    // Detect when updateLock has its timestamp changed
+                    if (event == FileObserver.ATTRIB) {
+                        RobotLog.d("Hotpatch update triggered");
+
+                        loadNewDex();
+                    }
+                }
+            };
+            watcher.startWatching();
+
+            loadNewDex();
         }
         catch (Exception e) {
             // Error loading this app's dex, no supervised opmodes will be available
@@ -56,25 +89,28 @@ public class SupervisedClassManager {
     }
 
     // Extracts additional information from the annotations in getSupervisedClasses()
-    public List<OpModeMetaAndInstance> getSupervisedOpmodes() throws IllegalAccessException, InstantiationException {
+    public List<OpModeMetaAndInstance> getSupervisedOpmodes() {
         List<Class<OpMode>> classes = getSupervisedClasses();
 
         OpModeMeta.Builder builder = new OpModeMeta.Builder();
 
         List<OpModeMetaAndInstance> opmodes = new LinkedList<OpModeMetaAndInstance>();
         for (Class clazz : classes) {
-            Supervised annotation = (Supervised)clazz.getAnnotation(Supervised.class);
+            try {
+                Supervised annotation = (Supervised) clazz.getAnnotation(Supervised.class);
 
-            builder.flavor = annotation.autonomous() ? OpModeMeta.Flavor.AUTONOMOUS : OpModeMeta.Flavor.TELEOP;
-            builder.group = annotation.group();
-            builder.name = annotation.name();
-            builder.autoTransition = annotation.next();
-            builder.source = OpModeMeta.Source.ANDROID_STUDIO;
+                builder.flavor = annotation.autonomous() ? OpModeMeta.Flavor.AUTONOMOUS : OpModeMeta.Flavor.TELEOP;
+                builder.group = annotation.group();
+                builder.name = annotation.name();
+                builder.autoTransition = annotation.next();
+                builder.source = OpModeMeta.Source.ANDROID_STUDIO;
 
-            OpModeSupervisor supervisor = new OpModeSupervisor(annotation.hashCode(), clazz);
+                OpModeSupervisor supervisor = new OpModeSupervisor(annotation.hashCode(), clazz);
 
-            // Build the new opmode consisting of the information from the annotation, and the supervisor
-            opmodes.add(new OpModeMetaAndInstance(builder.build(), supervisor, null));
+                // Build the new opmode consisting of the information from the annotation, and the supervisor
+                opmodes.add(new OpModeMetaAndInstance(builder.build(), supervisor, null));
+            }
+            catch (InstantiationException | IllegalAccessException e) { }
         }
 
         return opmodes;
@@ -132,28 +168,6 @@ public class SupervisedClassManager {
     }
 
 
-
-
-
-    @SuppressLint("SdCardPath")
-    public UpdateCache() {
-        watcher = new FileObserver(new File("/sdcard/FIRST/hotpatch/updateLock")) {
-            @Override
-            public void onEvent(int event, @Nullable String path) {
-                RobotLog.d("Saw updateLock event of type " + event);
-
-                // Detect when updateLock has its timestamp changed
-                if (event == FileObserver.ATTRIB) {
-                    RobotLog.d("Hotpatch update triggered");
-
-                    loadNewDex();
-                }
-            }
-        };
-        watcher.startWatching();
-
-        loadNewDex();
-    }
 
     @SuppressLint("SdCardPath")
     public void loadNewDex() {
