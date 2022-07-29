@@ -22,6 +22,58 @@ public class OpModeSupervisor extends LinearOpMode {
         opmode = clazz.newInstance();
     }
 
+    public boolean isRunning() {
+        return opmode.currentState.compareTo(SupervisedOpMode.State.INIT) >= 0;
+    }
+
+    public void hotpatch() {
+        try {
+            RobotLog.e("Reloading class %s", clazz.getCanonicalName());
+            telemetry.addData("Reloading class %s", clazz.getCanonicalName());
+            telemetry.update();
+
+            Class<SupervisedOpMode> newClazz = (Class<SupervisedOpMode>) SupervisedClassManager.get().findOpMode(clazz.getCanonicalName());
+
+            SupervisedOpMode oldOpmode = opmode;
+
+            opmode = newClazz.newInstance();
+
+            // Copy superclass variables over
+            opmode.gamepad1 = this.gamepad1;
+            opmode.gamepad2 = this.gamepad2;
+            opmode.telemetry = this.telemetry;
+            opmode.hardwareMap = this.hardwareMap;
+
+            // Copy all non-transient variables over
+            Field[] newFields = opmode.getClass().getDeclaredFields();
+            for (Field field : oldOpmode.getClass().getDeclaredFields()) {
+                if (Modifier.isTransient(field.getModifiers())) {
+                    continue;
+                }
+
+                // Find the matching field in the new object and copy it over
+                for (Field newField : newFields) {
+                    if (newField.getName() == field.getName() && newField.getType() == field.getType()) {
+                        field.setAccessible(true);
+                        newField.setAccessible(true);
+
+                        newField.set(opmode, field.get(oldOpmode));
+                    }
+                }
+            }
+
+            clazz = newClazz;
+            opmode.hotpatch();
+
+            opModeVersion = SupervisedClassManager.get().currentVersion;
+        }
+        catch (IllegalAccessException | InstantiationException e) {
+            RobotLog.e("Hotpatch exception: %s", e.getMessage());
+            telemetry.addData("Hotpatch exception: %s", e.getMessage());
+            telemetry.update();
+        }
+    }
+
     @Override
     public void runOpMode() {
         try {
@@ -45,38 +97,7 @@ public class OpModeSupervisor extends LinearOpMode {
             while (opModeIsActive()) {
                 try {
                     if (SupervisedClassManager.get().currentVersion > opModeVersion) {
-                        RobotLog.e("Reloading class %s", clazz.getCanonicalName());
-                        telemetry.addData("Reloading class %s", clazz.getCanonicalName());
-                        telemetry.update();
-
-                        Class<SupervisedOpMode> newClazz = (Class<SupervisedOpMode>)SupervisedClassManager.get().findOpMode(clazz.getCanonicalName());
-
-                        SupervisedOpMode oldOpmode = opmode;
-
-                        opmode = newClazz.newInstance();
-
-                        // Copy all non-transient variables over
-                        Field[] newFields = opmode.getClass().getDeclaredFields();
-                        for (Field field : oldOpmode.getClass().getDeclaredFields()) {
-                            if (Modifier.isTransient(field.getModifiers())) {
-                                continue;
-                            }
-
-                            // Find the matching field in the new object and copy it over
-                            for (Field newField : newFields) {
-                                if (newField.getName() == field.getName() && newField.getType() == field.getType()) {
-                                    field.setAccessible(true);
-                                    newField.setAccessible(true);
-
-                                    newField.set(opmode, field.get(oldOpmode));
-                                }
-                            }
-                        }
-
-                        clazz = newClazz;
-                        opmode.hotpatch();
-
-                        opModeVersion = SupervisedClassManager.get().currentVersion;
+                        hotpatch();
                     }
 
                     opmode.loop();
@@ -91,8 +112,8 @@ public class OpModeSupervisor extends LinearOpMode {
             opmode.stop();
         }
         catch (Exception e) {
-            RobotLog.e("Top-level opMode exception: %s", e.getMessage());
-            telemetry.addData("Top-level opMode exception: %s", e.getMessage());
+            RobotLog.e("Top-level OpMode exception: %s", e.getMessage());
+            telemetry.addData("Top-level OpMode exception: %s", e.getMessage());
             telemetry.update();
         }
 

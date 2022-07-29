@@ -27,6 +27,16 @@ import dalvik.system.DexFile;
 import dalvik.system.PathClassLoader;
 
 public class SupervisedClassManager {
+
+    public DexFile dexFile;
+
+    FileObserver watcher;
+    public int currentVersion = 0;
+    public FakeParentClassLoader loader;
+
+    List<SupervisedOpMode> opmodes = new ArrayList<SupervisedOpMode>();
+
+
     static SupervisedClassManager inst;
     public static SupervisedClassManager get() {
         if (inst == null) {
@@ -41,16 +51,10 @@ public class SupervisedClassManager {
         List<OpModeMetaAndInstance> opmodes = get().getSupervisedOpmodes();
 
         for (OpModeMetaAndInstance opmode : opmodes) {
+            opmodes.add(opmode);
             registry.register(opmode.meta, opmode.instance);
         }
     }
-
-
-    public DexFile dexFile;
-
-    FileObserver watcher;
-    public int currentVersion = 0;
-    public FakeParentClassLoader loader;
 
     public SupervisedClassManager()  {
         try {
@@ -76,6 +80,7 @@ public class SupervisedClassManager {
                         RobotLog.d("Hotpatch update triggered");
 
                         loadNewDex();
+                        hotpatchAll();
                     }
                 }
             };
@@ -201,6 +206,16 @@ public class SupervisedClassManager {
                 // Should be impossible
                 throw null;
             }
+        }
+    }
+
+    void hotpatchAll() {
+        for (SupervisedOpMode i : opmodes) {
+            if (i.opModeIsActive()) {
+                continue;
+            }
+
+            i.hotpatch();
         }
     }
 
