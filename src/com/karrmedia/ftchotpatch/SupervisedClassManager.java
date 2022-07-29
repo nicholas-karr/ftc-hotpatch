@@ -34,7 +34,7 @@ public class SupervisedClassManager {
     public int currentVersion = 0;
     public FakeParentClassLoader loader;
 
-    List<SupervisedOpMode> opmodes = new ArrayList<SupervisedOpMode>();
+    List<OpModeSupervisor> opmodes = new ArrayList<OpModeSupervisor>();
 
 
     static SupervisedClassManager inst;
@@ -48,10 +48,10 @@ public class SupervisedClassManager {
     public static void init(OpModeManager registry) {
         inst = new SupervisedClassManager();
 
-        List<OpModeMetaAndInstance> opmodes = get().getSupervisedOpmodes();
+        List<OpModeMetaAndInstance> opmodeMetas = get().getSupervisedOpmodes();
 
-        for (OpModeMetaAndInstance opmode : opmodes) {
-            opmodes.add(opmode);
+        for (OpModeMetaAndInstance opmode : opmodeMetas) {
+            get().opmodes.add((OpModeSupervisor)opmode.instance);
             registry.register(opmode.meta, opmode.instance);
         }
     }
@@ -210,7 +210,7 @@ public class SupervisedClassManager {
     }
 
     void hotpatchAll() {
-        for (SupervisedOpMode i : opmodes) {
+        for (OpModeSupervisor i : opmodes) {
             if (i.opModeIsActive()) {
                 continue;
             }

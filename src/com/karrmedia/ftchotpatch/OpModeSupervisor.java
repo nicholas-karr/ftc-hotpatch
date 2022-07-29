@@ -29,8 +29,10 @@ public class OpModeSupervisor extends LinearOpMode {
     public void hotpatch() {
         try {
             RobotLog.e("Reloading class %s", clazz.getCanonicalName());
-            telemetry.addData("Reloading class %s", clazz.getCanonicalName());
-            telemetry.update();
+            if (isRunning()) {
+                telemetry.addData("Reloading class %s", clazz.getCanonicalName());
+                telemetry.update();
+            }
 
             Class<SupervisedOpMode> newClazz = (Class<SupervisedOpMode>) SupervisedClassManager.get().findOpMode(clazz.getCanonicalName());
 
@@ -69,8 +71,10 @@ public class OpModeSupervisor extends LinearOpMode {
         }
         catch (IllegalAccessException | InstantiationException e) {
             RobotLog.e("Hotpatch exception: %s", e.getMessage());
-            telemetry.addData("Hotpatch exception: %s", e.getMessage());
-            telemetry.update();
+            if (isRunning()) {
+                telemetry.addData("Hotpatch exception: %s", e.getMessage());
+                telemetry.update();
+            }
         }
     }
 
@@ -103,8 +107,10 @@ public class OpModeSupervisor extends LinearOpMode {
                     opmode.loop();
                 } catch (Exception e) {
                     RobotLog.e("Exception during opMode loop: %s", e.getMessage());
-                    telemetry.addData("Exception during opMode loop: %s", e.getMessage());
-                    telemetry.update();
+                    if (isRunning()) {
+                        telemetry.addData("Exception during opMode loop: %s", e.getMessage());
+                        telemetry.update();
+                    }
                 }
             }
 
@@ -113,8 +119,10 @@ public class OpModeSupervisor extends LinearOpMode {
         }
         catch (Exception e) {
             RobotLog.e("Top-level OpMode exception: %s", e.getMessage());
-            telemetry.addData("Top-level OpMode exception: %s", e.getMessage());
-            telemetry.update();
+            if (isRunning()) {
+                telemetry.addData("Top-level OpMode exception: %s", e.getMessage());
+                telemetry.update();
+            }
         }
 
     }
