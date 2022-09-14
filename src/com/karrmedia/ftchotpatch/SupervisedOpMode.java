@@ -25,7 +25,6 @@ public abstract class SupervisedOpMode {
     public void hotpatch() {}
 
 
-    // Compatibility with LinearOpMode
     enum State {
         DEFAULT,
         STOP,
@@ -37,9 +36,12 @@ public abstract class SupervisedOpMode {
 
     public State currentState = State.STOP;
 
+    // Compatibility with LinearOpMode
     public boolean opModeIsActive() {
         return currentState.compareTo(State.START) >= 0;
     }
+
+    public String variation = "";
 
     public Gamepad gamepad1 = null;
     public Gamepad gamepad2 = null;

@@ -1,5 +1,7 @@
 package com.karrmedia.ftchotpatch;
 
+import android.annotation.SuppressLint;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -8,8 +10,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 class DeployHotpatch {
+    @SuppressLint("SdCardPath")
     static String root = "/sdcard/FIRST/hotpatch";
-    static String dexDir = /* args.get(0) + */ "/TeamCode/build/intermediates/dex/extremeTurboDebug/mergeDexExtremeTurboDebug";
+    static String dexDir = /* args.get(0) + */ "/TeamCode/build/intermediates/dex/debug/mergeProjectDexDebug";
     static String[] adbCommand = new String[] { "", "-c", "adb" };
 
     public static void main(String args[])

@@ -11,13 +11,15 @@ public class OpModeSupervisor extends LinearOpMode {
 
     // Class and instance of the child OpMode
     Class<? extends SupervisedOpMode> clazz;
+    String variation;
     SupervisedOpMode opmode;
 
     // Version that is incremented every time the OpMode is replaced
     int opModeVersion = 1;
 
-    public OpModeSupervisor(Class<? extends SupervisedOpMode> clazz) throws IllegalAccessException, InstantiationException {
+    public OpModeSupervisor(Class<? extends SupervisedOpMode> clazz, String variation) throws IllegalAccessException, InstantiationException {
         this.clazz = clazz;
+        this.variation = variation;
 
         opmode = clazz.newInstance();
     }
@@ -41,6 +43,7 @@ public class OpModeSupervisor extends LinearOpMode {
             opmode = newClazz.newInstance();
 
             // Copy superclass variables over
+            opmode.variation = this.variation;
             opmode.gamepad1 = this.gamepad1;
             opmode.gamepad2 = this.gamepad2;
             opmode.telemetry = this.telemetry;
@@ -81,6 +84,7 @@ public class OpModeSupervisor extends LinearOpMode {
     @Override
     public void runOpMode() {
         try {
+            opmode.variation = this.variation;
             opmode.gamepad1 = this.gamepad1;
             opmode.gamepad2 = this.gamepad2;
             opmode.telemetry = this.telemetry;

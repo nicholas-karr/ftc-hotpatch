@@ -20,4 +20,10 @@ public @interface Supervised {
     // What OpMode will be automatically selected after this one completes
     // Note: The next OpMode must be manually initialized and started
     String next() default "";
+
+    // What variations can be made to this OpMode
+    // A version of this class will be generated with a variation
+    // replacing any question marks in the name, per variation
+    // Example: variations={"Red", "Blue"} for the name ?TeleOp to generate RedTeleOp and BlueTeleOp
+    String[] variations() default { };
 }

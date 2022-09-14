@@ -6,7 +6,6 @@ import android.os.FileObserver;
 import androidx.annotation.Nullable;
 
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpModeManager;
 import com.qualcomm.robotcore.util.RobotLog;
 
@@ -30,11 +29,11 @@ public class SupervisedClassManager {
 
     public DexFile dexFile;
 
-    FileObserver watcher;
+    public FileObserver watcher;
     public int currentVersion = 0;
     public FakeParentClassLoader loader;
 
-    List<OpModeSupervisor> opmodes = new ArrayList<OpModeSupervisor>();
+    List<OpModeSupervisor> opmodes = new ArrayList<>();
 
 
     static SupervisedClassManager inst;
@@ -44,6 +43,7 @@ public class SupervisedClassManager {
         }
         return inst;
     }
+
 
     public static void init(OpModeManager registry) {
         inst = new SupervisedClassManager();
@@ -56,11 +56,13 @@ public class SupervisedClassManager {
         }
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public SupervisedClassManager()  {
         try {
             //todo: replace this with something that isn't deprecated (right now it is inspired by how FTC does it)
             this.dexFile = new DexFile(AppUtil.getInstance().getApplication().getPackageCodePath());
 
+            @SuppressLint("SdCardPath")
             File classDirectory = new File("/sdcard/FIRST/hotpatch/");
             if (!classDirectory.exists()){
                 classDirectory.mkdirs();
@@ -70,7 +72,7 @@ public class SupervisedClassManager {
             File updateLock = new File("/sdcard/FIRST/hotpatch/updateLock");
             updateLock.createNewFile();
 
-            watcher = new FileObserver(updateLock) {
+            watcher = new FileObserver(updateLock.getAbsolutePath()) {
                 @Override
                 public void onEvent(int event, @Nullable String path) {
                     RobotLog.d("Saw updateLock event of type " + event);
@@ -95,41 +97,60 @@ public class SupervisedClassManager {
 
     // Extracts additional information from the annotations in getSupervisedClasses()
     public List<OpModeMetaAndInstance> getSupervisedOpmodes() {
-        List<Class<OpMode>> classes = getSupervisedClasses();
+        List<Class<? extends SupervisedOpMode>> classes = getSupervisedClasses();
 
         OpModeMeta.Builder builder = new OpModeMeta.Builder();
 
-        List<OpModeMetaAndInstance> opmodes = new LinkedList<OpModeMetaAndInstance>();
-        for (Class clazz : classes) {
-            try {
-                Supervised annotation = (Supervised) clazz.getAnnotation(Supervised.class);
+        List<OpModeMetaAndInstance> opmodes = new LinkedList<>();
+        for (Class<? extends SupervisedOpMode> clazz : classes) {
+            Supervised annotation = clazz.getAnnotation(Supervised.class);
+            if (annotation == null) { throw null; }
 
-                builder.flavor = annotation.autonomous() ? OpModeMeta.Flavor.AUTONOMOUS : OpModeMeta.Flavor.TELEOP;
-                builder.group = annotation.group();
-                builder.name = annotation.name();
-                builder.autoTransition = annotation.next();
-                builder.source = OpModeMeta.Source.ANDROID_STUDIO;
+            if (annotation.variations().length != 0 && annotation.name().contains("?")) {
+                for (String variation : annotation.variations()) {
+                    try {
+                        builder.flavor = annotation.autonomous() ? OpModeMeta.Flavor.AUTONOMOUS : OpModeMeta.Flavor.TELEOP;
+                        builder.group = annotation.group();
+                        builder.name = annotation.name().replaceAll("\\?", variation);
+                        builder.autoTransition = annotation.next().replaceAll("\\?", variation);
+                        builder.source = OpModeMeta.Source.ANDROID_STUDIO;
 
-                OpModeSupervisor supervisor = new OpModeSupervisor(clazz);
+                        OpModeSupervisor supervisor = new OpModeSupervisor(clazz, variation);
 
-                // Build the new OpMode consisting of the information from the annotation, and the supervisor
-                opmodes.add(new OpModeMetaAndInstance(builder.build(), supervisor, null));
+                        // Build the new OpMode consisting of the information from the annotation, and the supervisor
+                        opmodes.add(new OpModeMetaAndInstance(builder.build(), supervisor, null));
+                    } catch (InstantiationException | IllegalAccessException e) {}
+                }
             }
-            catch (InstantiationException | IllegalAccessException e) { }
+            else
+            {
+                try {
+                    builder.flavor = annotation.autonomous() ? OpModeMeta.Flavor.AUTONOMOUS : OpModeMeta.Flavor.TELEOP;
+                    builder.group = annotation.group();
+                    builder.name = annotation.name();
+                    builder.autoTransition = annotation.next();
+                    builder.source = OpModeMeta.Source.ANDROID_STUDIO;
+
+                    OpModeSupervisor supervisor = new OpModeSupervisor(clazz, "");
+
+                    // Build the new OpMode consisting of the information from the annotation, and the supervisor
+                    opmodes.add(new OpModeMetaAndInstance(builder.build(), supervisor, null));
+                } catch (InstantiationException | IllegalAccessException e) {}
+            }
         }
 
         return opmodes;
     }
 
-    public List<Class<OpMode>> getSupervisedClasses()
+    public List<Class<? extends SupervisedOpMode>> getSupervisedClasses()
     {
         // Dumps all class entries from dexFile
-        List<String> classNames = new ArrayList<String>(Collections.list(dexFile.entries()));
+        List<String> classNames = new ArrayList<>(Collections.list(dexFile.entries()));
 
         classNames.addAll(InstantRunHelper.getAllClassNames(AppUtil.getDefContext()));
 
-        List<Class> classes = classNamesToClasses(classNames);
-        List<Class<OpMode>> opmodes = new LinkedList<Class<OpMode>>();
+        List<Class<?>> classes = classNamesToClasses(classNames);
+        List<Class<? extends SupervisedOpMode>> opmodes = new LinkedList<>();
 
         for (Class clazz : classes) {
             // Check if a class has the correct annotation and allow it to opt out with the normal Disabled annotation
@@ -141,9 +162,9 @@ public class SupervisedClassManager {
         return opmodes;
     }
 
-    public List<Class> classNamesToClasses(Collection<String> classNames)
+    public List<Class<?>> classNamesToClasses(Collection<String> classNames)
     {
-        List<Class> res = new LinkedList<Class>();
+        List<Class<?>> res = new LinkedList<>();
 
         // Use whatever class loader created this object - all of our swappable classes are backed by loadable classes in the APK,
         // so they will be loadable by this
@@ -159,13 +180,12 @@ public class SupervisedClassManager {
             try
             {
                 // Map class name back to class
-                Class clazz = Class.forName(className, false, classLoaderToUse);
+                Class<?> clazz = Class.forName(className, false, classLoaderToUse);
                 res.add(clazz);
             }
             catch (NoClassDefFoundError|ClassNotFoundException ex)
             {
                 // We can't find that class
-                continue;
             }
         }
 
@@ -220,7 +240,7 @@ public class SupervisedClassManager {
     }
 
     // Just exposes findClass() which sidesteps searching the parent classes for the updated versions
-    class FakeParentClassLoader extends PathClassLoader {
+    static class FakeParentClassLoader extends PathClassLoader {
         public FakeParentClassLoader(String dexPath, ClassLoader parent) {
             super(dexPath, parent);
         }
