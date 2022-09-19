@@ -7,22 +7,22 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 public abstract class SupervisedOpMode {
     // Code that runs when the INIT button is pressed (mandatory)
-    public abstract void init();
+    public abstract void init() throws Exception;
 
     // Code that runs repeatedly during the init stage (optional)
-    public void init_loop() {}
+    public void init_loop() throws Exception {}
 
     // Code that runs when the PLAY button is pressed (optional)
-    public void start() {}
+    public void start() throws Exception {}
 
     // Code that runs repeatedly after the PLAY button is pressed (optional)
-    public void loop() {}
+    public void loop() throws Exception {}
 
     // Code that runs when the OpMode is stopped (optional)
-    public void stop() {}
+    public void stop() throws Exception {}
 
     // Code that runs after this OpMode is dynamically updated
-    public void hotpatch() {}
+    public void hotpatch() throws Exception {}
 
 
     enum State {

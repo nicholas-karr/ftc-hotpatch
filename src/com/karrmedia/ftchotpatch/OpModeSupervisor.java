@@ -72,7 +72,7 @@ public class OpModeSupervisor extends LinearOpMode {
 
             opModeVersion = SupervisedClassManager.get().currentVersion;
         }
-        catch (IllegalAccessException | InstantiationException e) {
+        catch (Exception e) {
             RobotLog.e("Hotpatch exception: %s", e.getMessage());
             if (isRunning()) {
                 telemetry.addData("Hotpatch exception: %s", e.getMessage());
