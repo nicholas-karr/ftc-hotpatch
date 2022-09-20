@@ -1,6 +1,7 @@
 package com.karrmedia.ftchotpatch;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.RobotLog;
 
 import java.lang.reflect.Field;
@@ -8,6 +9,8 @@ import java.lang.reflect.Modifier;
 
 // Keeps track of the code for an OpMode and runs it
 public class OpModeSupervisor extends LinearOpMode {
+
+    ElapsedTime runtime = new ElapsedTime();
 
     // Class and instance of the child OpMode
     Class<? extends SupervisedOpMode> clazz;
@@ -48,6 +51,7 @@ public class OpModeSupervisor extends LinearOpMode {
             opmode.gamepad2 = this.gamepad2;
             opmode.telemetry = this.telemetry;
             opmode.hardwareMap = this.hardwareMap;
+            opmode.elapsedRuntime = this.runtime;
 
             // Copy all non-transient variables over
             Field[] newFields = opmode.getClass().getDeclaredFields();
@@ -89,15 +93,19 @@ public class OpModeSupervisor extends LinearOpMode {
             opmode.gamepad2 = this.gamepad2;
             opmode.telemetry = this.telemetry;
             opmode.hardwareMap = this.hardwareMap;
+            opmode.elapsedRuntime = this.runtime;
 
+            runtime.reset();
             opmode.currentState = SupervisedOpMode.State.INIT;
             opmode.init();
 
             while (!isStarted()) {
                 opmode.currentState = SupervisedOpMode.State.INIT_LOOP;
                 opmode.init_loop();
+                idle();
             }
 
+            runtime.reset();
             opmode.currentState = SupervisedOpMode.State.START;
             opmode.start();
 
