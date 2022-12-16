@@ -26,4 +26,7 @@ public @interface Supervised {
     // replacing any question marks in the name, per variation
     // Example: variations={"Red", "Blue"} for the name ?TeleOp to generate RedTeleOp and BlueTeleOp
     String[] variations() default { };
+
+    // Whether to actually execute loop() or return after start()
+    boolean linear() default true;
 }

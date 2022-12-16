@@ -115,7 +115,7 @@ public class SupervisedClassManager {
                         builder.autoTransition = annotation.next().replaceAll("\\?", variation);
                         builder.source = OpModeMeta.Source.ANDROID_STUDIO;
 
-                        OpModeSupervisor supervisor = new OpModeSupervisor(clazz, variation);
+                        OpModeSupervisor supervisor = new OpModeSupervisor(clazz, variation, annotation.linear());
 
                         // Build the new OpMode consisting of the information from the annotation, and the supervisor
                         opmodes.add(new OpModeMetaAndInstance(builder.build(), supervisor, null));
@@ -131,7 +131,7 @@ public class SupervisedClassManager {
                     builder.autoTransition = annotation.next();
                     builder.source = OpModeMeta.Source.ANDROID_STUDIO;
 
-                    OpModeSupervisor supervisor = new OpModeSupervisor(clazz, "");
+                    OpModeSupervisor supervisor = new OpModeSupervisor(clazz, "", annotation.linear());
 
                     // Build the new OpMode consisting of the information from the annotation, and the supervisor
                     opmodes.add(new OpModeMetaAndInstance(builder.build(), supervisor, null));

@@ -1,5 +1,6 @@
 package com.karrmedia.ftchotpatch;
 
+import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.RobotLog;
@@ -16,15 +17,18 @@ public class OpModeSupervisor extends LinearOpMode {
     Class<? extends SupervisedOpMode> clazz;
     String variation;
     SupervisedOpMode opmode;
+    boolean linear;
 
     // Version that is incremented every time the OpMode is replaced
     int opModeVersion = 1;
 
-    public OpModeSupervisor(Class<? extends SupervisedOpMode> clazz, String variation) throws IllegalAccessException, InstantiationException {
+    GamepadEx gamepad1ex;
+    GamepadEx gamepad2ex;
+
+    public OpModeSupervisor(Class<? extends SupervisedOpMode> clazz, String variation, boolean linear) throws IllegalAccessException, InstantiationException {
         this.clazz = clazz;
         this.variation = variation;
-
-        opmode = clazz.newInstance();
+        this.linear = linear;
     }
 
     public boolean isRunning() {
@@ -47,8 +51,8 @@ public class OpModeSupervisor extends LinearOpMode {
 
             // Copy superclass variables over
             opmode.variation = this.variation;
-            opmode.gamepad1 = this.gamepad1;
-            opmode.gamepad2 = this.gamepad2;
+            opmode.gamepad1 = this.gamepad1ex;
+            opmode.gamepad2 = this.gamepad2ex;
             opmode.telemetry = this.telemetry;
             opmode.hardwareMap = this.hardwareMap;
             opmode.elapsedRuntime = this.runtime;
@@ -88,9 +92,16 @@ public class OpModeSupervisor extends LinearOpMode {
     @Override
     public void runOpMode() {
         try {
+            opmode = clazz.newInstance();
+
+            if (this.gamepad1ex == null) {
+                this.gamepad1ex = new GamepadEx(gamepad1);
+                this.gamepad2ex = new GamepadEx(gamepad2);
+            }
+
             opmode.variation = this.variation;
-            opmode.gamepad1 = this.gamepad1;
-            opmode.gamepad2 = this.gamepad2;
+            opmode.gamepad1 = this.gamepad1ex;
+            opmode.gamepad2 = this.gamepad2ex;
             opmode.telemetry = this.telemetry;
             opmode.hardwareMap = this.hardwareMap;
             opmode.elapsedRuntime = this.runtime;
@@ -99,29 +110,36 @@ public class OpModeSupervisor extends LinearOpMode {
             opmode.currentState = SupervisedOpMode.State.INIT;
             opmode.init();
 
-            while (!isStarted()) {
+            while (!isStarted() && !isStopRequested()) {
                 opmode.currentState = SupervisedOpMode.State.INIT_LOOP;
-                opmode.init_loop();
+                opmode.initLoop();
                 idle();
+            }
+
+            if (isStopRequested()) {
+                opmode.stop();
+                return;
             }
 
             runtime.reset();
             opmode.currentState = SupervisedOpMode.State.START;
             opmode.start();
 
-            opmode.currentState = SupervisedOpMode.State.LOOP;
-            while (opModeIsActive()) {
-                try {
-                    if (SupervisedClassManager.get().currentVersion > opModeVersion) {
-                        hotpatch();
-                    }
+            if (!linear) {
+                opmode.currentState = SupervisedOpMode.State.LOOP;
+                while (opModeIsActive() && !isStopRequested()) {
+                    try {
+                        if (SupervisedClassManager.get().currentVersion > opModeVersion) {
+                            hotpatch();
+                        }
 
-                    opmode.loop();
-                } catch (Exception e) {
-                    RobotLog.e("Exception during opMode loop: %s", e.getMessage());
-                    if (isRunning()) {
-                        telemetry.addData("Exception during opMode loop: %s", e.getMessage());
-                        telemetry.update();
+                        opmode.loop();
+                    } catch (Exception e) {
+                        RobotLog.e("Exception during opMode loop: %s", e.getMessage());
+                        if (isRunning()) {
+                            telemetry.addData("Exception during opMode loop: %s", e.getMessage());
+                            telemetry.update();
+                        }
                     }
                 }
             }
@@ -130,9 +148,9 @@ public class OpModeSupervisor extends LinearOpMode {
             opmode.stop();
         }
         catch (Exception e) {
-            RobotLog.e("Top-level OpMode exception: %s", e.getMessage());
+            RobotLog.e("Top-level OpMode exception: %s", e.toString());
             if (isRunning()) {
-                telemetry.addData("Top-level OpMode exception: %s", e.getMessage());
+                telemetry.addData("Top-level OpMode exception: %s", e.toString());
                 telemetry.update();
             }
         }

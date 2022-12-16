@@ -24,6 +24,7 @@ class DeployHotpatch {
         }
         else if (os.contains("nix") || os.contains("nux") || os.contains("aix") || os.contains("mac")) {
             adbCommand[0] = "/bin/bash";
+            adbCommand[2] = "/Users/3121287/usr/local/bin/adb";
         }
 
         // Path to folder containing FtcController project is passed as the 1st argument
@@ -47,7 +48,7 @@ class DeployHotpatch {
     // Execute adb command
     static String adb(String cmd) throws IOException {
         // Create process
-        Process process = Runtime.getRuntime().exec(adbCommand[0] + " " + adbCommand[1] + " " + adbCommand[2] + " " + cmd);
+        Process process = Runtime.getRuntime().exec(adbCommand[2] + " " + cmd);
 
         // Read stdout to a string
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -85,6 +86,9 @@ class DeployHotpatch {
             if (file.getPath().endsWith(".dex")) {
                 ret.add(file.getPath());
             }
+            else if (file.isDirectory()) {
+                ret.addAll(getDexesInDirectory(file.getPath()));
+            }
         }
 
         return ret;
@@ -97,6 +101,7 @@ class DeployHotpatch {
     static void pushFiles(List<String> source, String destDir) throws IOException {
         for (String i : source) {
             pushFile(i, destDir);
+            return;
         }
     }
 }
