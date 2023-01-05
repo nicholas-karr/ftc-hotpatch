@@ -28,5 +28,5 @@ public @interface Supervised {
     String[] variations() default { };
 
     // Whether to actually execute loop() or return after start()
-    boolean linear() default true;
+    boolean linear() default false;
 }
