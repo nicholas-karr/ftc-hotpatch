@@ -14,9 +14,9 @@ public class OpModeSupervisor extends LinearOpMode {
     ElapsedTime runtime = new ElapsedTime();
 
     // Class and instance of the child OpMode
-    Class<? extends SupervisedOpMode> clazz;
+    Class<? extends SupervisedLinearOpMode> clazz;
     String variation;
-    SupervisedOpMode opmode;
+    SupervisedLinearOpMode opmode;
     boolean linear;
 
     // Version that is incremented every time the OpMode is replaced
@@ -25,14 +25,14 @@ public class OpModeSupervisor extends LinearOpMode {
     GamepadEx gamepad1ex;
     GamepadEx gamepad2ex;
 
-    public OpModeSupervisor(Class<? extends SupervisedOpMode> clazz, String variation, boolean linear) throws IllegalAccessException, InstantiationException {
+    public OpModeSupervisor(Class<? extends SupervisedLinearOpMode> clazz, String variation, boolean linear) throws IllegalAccessException, InstantiationException {
         this.clazz = clazz;
         this.variation = variation;
         this.linear = linear;
     }
 
     public boolean isRunning() {
-        return opmode.currentState.compareTo(SupervisedOpMode.State.INIT) >= 0;
+        return opmode.currentState.compareTo(SupervisedLinearOpMode.State.INIT) >= 0;
     }
 
     public void hotpatch() {
@@ -43,9 +43,9 @@ public class OpModeSupervisor extends LinearOpMode {
                 telemetry.update();
             }
 
-            Class<SupervisedOpMode> newClazz = (Class<SupervisedOpMode>) SupervisedClassManager.get().findOpMode(clazz.getCanonicalName());
+            Class<SupervisedLinearOpMode> newClazz = (Class<SupervisedLinearOpMode>) SupervisedClassManager.get().findOpMode(clazz.getCanonicalName());
 
-            SupervisedOpMode oldOpmode = opmode;
+            SupervisedLinearOpMode oldOpmode = opmode;
 
             opmode = newClazz.newInstance();
 
@@ -56,6 +56,12 @@ public class OpModeSupervisor extends LinearOpMode {
             opmode.telemetry = this.telemetry;
             opmode.hardwareMap = this.hardwareMap;
             opmode.elapsedRuntime = this.runtime;
+            opmode.opModeIsActiveChecker = new SupervisedLinearOpMode.OpModeIsActiveChecker() {
+                @Override
+                public boolean check() {
+                    return !isStopRequested() && isStarted();
+                }
+            };
 
             // Copy all non-transient variables over
             Field[] newFields = opmode.getClass().getDeclaredFields();
@@ -105,16 +111,22 @@ public class OpModeSupervisor extends LinearOpMode {
             opmode.telemetry = this.telemetry;
             opmode.hardwareMap = this.hardwareMap;
             opmode.elapsedRuntime = this.runtime;
+            opmode.opModeIsActiveChecker = new SupervisedLinearOpMode.OpModeIsActiveChecker() {
+                @Override
+                public boolean check() {
+                    return !isStopRequested() && isStarted();
+                }
+            };
 
             runtime.reset();
-            opmode.currentState = SupervisedOpMode.State.INIT;
+            opmode.currentState = SupervisedLinearOpMode.State.INIT;
             opmode.init();
 
-            while (!isStarted() && !isStopRequested()) {
-                opmode.currentState = SupervisedOpMode.State.INIT_LOOP;
+            /*while (!isStarted() && !isStopRequested()) {
+                opmode.currentState = SupervisedLinearOpMode.State.INIT_LOOP;
                 opmode.initLoop();
                 idle();
-            }
+            }*/
 
             if (isStopRequested()) {
                 opmode.stop();
@@ -122,11 +134,11 @@ public class OpModeSupervisor extends LinearOpMode {
             }
 
             runtime.reset();
-            opmode.currentState = SupervisedOpMode.State.START;
+            opmode.currentState = SupervisedLinearOpMode.State.START;
             opmode.start();
 
-            if (!linear) {
-                opmode.currentState = SupervisedOpMode.State.LOOP;
+            /*if (!linear) {
+                opmode.currentState = SupervisedLinearOpMode.State.LOOP;
                 while (opModeIsActive() && !isStopRequested()) {
                     try {
                         if (SupervisedClassManager.get().currentVersion > opModeVersion) {
@@ -142,9 +154,9 @@ public class OpModeSupervisor extends LinearOpMode {
                         }
                     }
                 }
-            }
+            }*/
 
-            opmode.currentState = SupervisedOpMode.State.STOP;
+            opmode.currentState = SupervisedLinearOpMode.State.STOP;
             opmode.stop();
         }
         catch (Exception e) {

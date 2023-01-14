@@ -1,7 +1,6 @@
 package com.karrmedia.ftchotpatch;
 
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
-import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -9,18 +8,12 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 import java.util.concurrent.TimeUnit;
 
-public abstract class SupervisedOpMode {
+public abstract class SupervisedLinearOpMode {
     // Code that runs when the INIT button is pressed (optional)
     public void init() throws Exception {};
 
-    // Code that runs repeatedly during the init stage (optional)
-    public void initLoop() throws Exception {}
-
     // Code that runs when the PLAY button is pressed (optional)
     public void start() throws Exception {}
-
-    // Code that runs repeatedly after the PLAY button is pressed (optional)
-    public void loop() throws Exception {}
 
     // Code that runs when the OpMode is stopped (optional)
     public void stop() throws Exception {}
@@ -33,16 +26,19 @@ public abstract class SupervisedOpMode {
         DEFAULT,
         STOP,
         INIT,
-        INIT_LOOP,
         START,
-        LOOP,
     }
 
     public State currentState = State.STOP;
 
+    interface OpModeIsActiveChecker {
+        boolean check();
+    }
+    OpModeIsActiveChecker opModeIsActiveChecker;
+
     // Compatibility with LinearOpMode
     public boolean opModeIsActive() {
-        return currentState.compareTo(State.START) >= 0;
+        return currentState.compareTo(State.START) >= 0 && opModeIsActiveChecker.check();
     }
 
     public String variation = "";
