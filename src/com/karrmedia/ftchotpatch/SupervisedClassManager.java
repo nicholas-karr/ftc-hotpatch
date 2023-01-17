@@ -97,12 +97,12 @@ public class SupervisedClassManager {
 
     // Extracts additional information from the annotations in getSupervisedClasses()
     public List<OpModeMetaAndInstance> getSupervisedOpmodes() {
-        List<Class<? extends SupervisedLinearOpMode>> classes = getSupervisedClasses();
+        List<Class<? extends SupervisedOpMode>> classes = getSupervisedClasses();
 
         OpModeMeta.Builder builder = new OpModeMeta.Builder();
 
         List<OpModeMetaAndInstance> opmodes = new LinkedList<>();
-        for (Class<? extends SupervisedLinearOpMode> clazz : classes) {
+        for (Class<? extends SupervisedOpMode> clazz : classes) {
             Supervised annotation = clazz.getAnnotation(Supervised.class);
             if (annotation == null) { throw null; }
 
@@ -142,7 +142,7 @@ public class SupervisedClassManager {
         return opmodes;
     }
 
-    public List<Class<? extends SupervisedLinearOpMode>> getSupervisedClasses()
+    public List<Class<? extends SupervisedOpMode>> getSupervisedClasses()
     {
         // Dumps all class entries from dexFile
         List<String> classNames = new ArrayList<>(Collections.list(dexFile.entries()));
@@ -150,7 +150,7 @@ public class SupervisedClassManager {
         classNames.addAll(InstantRunHelper.getAllClassNames(AppUtil.getDefContext()));
 
         List<Class<?>> classes = classNamesToClasses(classNames);
-        List<Class<? extends SupervisedLinearOpMode>> opmodes = new LinkedList<>();
+        List<Class<? extends SupervisedOpMode>> opmodes = new LinkedList<>();
 
         for (Class clazz : classes) {
             // Check if a class has the correct annotation and allow it to opt out with the normal Disabled annotation
@@ -213,14 +213,14 @@ public class SupervisedClassManager {
         currentVersion++;
     }
 
-    Class<SupervisedLinearOpMode> findOpMode(String name) {
+    Class<SupervisedOpMode> findOpMode(String name) {
         try {
-            return (Class<SupervisedLinearOpMode>)loader.findClass(name);
+            return (Class<SupervisedOpMode>)loader.findClass(name);
         }
         catch (ClassNotFoundException e) {
             try {
                 // Give up on updating the class and return the apk's version
-                return (Class<SupervisedLinearOpMode>)this.getClass().getClassLoader().loadClass(name);
+                return (Class<SupervisedOpMode>)this.getClass().getClassLoader().loadClass(name);
             }
             catch (ClassNotFoundException e2) {
                 // Should be impossible

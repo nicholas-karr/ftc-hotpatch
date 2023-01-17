@@ -38,7 +38,7 @@ SupervisedClassManager.init(manager);
 6. Modify an existing OpMode to be hotpatchable
     - Add the following under existing import statements
     ```
-    import com.karrmedia.ftchotpatch.SupervisedLinearOpMode;
+    import com.karrmedia.ftchotpatch.SupervisedOpMode;
     import com.karrmedia.ftchotpatch.Supervised;
     ``` 
     - Change the `@TeleOp` or `@Autonomous` annotation to `@Supervised`, and 

@@ -8,12 +8,16 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 import java.util.concurrent.TimeUnit;
 
-public abstract class SupervisedLinearOpMode {
+public abstract class SupervisedOpMode {
     // Code that runs when the INIT button is pressed (optional)
     public void init() throws Exception {};
 
+    public void initLoop() throws Exception {};
+
     // Code that runs when the PLAY button is pressed (optional)
     public void start() throws Exception {}
+
+    public void loop() throws Exception {}
 
     // Code that runs when the OpMode is stopped (optional)
     public void stop() throws Exception {}
@@ -26,7 +30,9 @@ public abstract class SupervisedLinearOpMode {
         DEFAULT,
         STOP,
         INIT,
+        INIT_LOOP,
         START,
+        LOOP,
     }
 
     public State currentState = State.STOP;
